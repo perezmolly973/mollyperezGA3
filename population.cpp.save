@@ -1,0 +1,159 @@
+#include "population.h"
+#include <iostream>
+#include <cstdlib>
+
+Population::Population() {
+    individuals = nullptr;
+    nIndividuals = 0;
+    nCrossover = 1;
+    mutationRate = 0.0;
+}
+
+Population::~Population() {
+    if (individuals != nullptr) {
+        delete[] individuals;
+        individuals = nullptr;
+    }
+    nIndividuals = 0;
+}
+
+void Population::generate_population(int popSize, int nGenes) {
+    // Allocate memory for individuals array
+    individuals = new genome[popSize];
+    nIndividuals = popSize;
+
+    // Initialize each genome in the population
+    for (int i = 0; i < popSize; ++i) {
+        individuals[i].allocate(nGenes);
+        individuals[i].randomize();
+    }
+}
+
+void Population::set_target(Pixel* target, int imageSize) {
+    targetGenome = target;
+    this->imageSize = imageSize;
+}
+
+void Population::select_parents() {
+    // Initialize the best two individuals to the first two individuals in the population
+    p1 = &individuals[0];
+    p2 = &individuals[1];
+
+    // Iterate through the rest of the individuals to find the best two
+    for (int i = 2; i < nIndividuals; ++i) {
+        if (individuals[i].calculate_overall_fitness() > p1->calculate_overall_fitness()) {
+            p2 = p1; // Move the current p1 to p2
+            p1 = &individuals[i]; // Set the new p1
+        } else if (individuals[i].calculate_overall_fitness() > p2->calculate_overall_fitness()) {
+            p2 = &individuals[i]; // Set the new p2
+        }
+    }
+}
+
+void Population::set_nCrossover(int n) {
+    // Set the number of crossover points to a positive integer
+    if (n > 0) {
+        nCrossover = n;
+    } else {
+        nCrossover = 1; // Set to 1 if n is not positive
+    }
+}
+
+int Population::get_nCrossover() {
+    return nCrossover;
+
+void Population::select_parents() {
+    // Initialize the best two individuals to the first two individuals in the population
+    p1 = &individuals[0];
+    p2 = &individuals[1];
+
+    // Iterate through the rest of the individuals to find the best two
+    for (int i = 2; i < nIndividuals; ++i) {
+        if (individuals[i].calculate_overall_fitness() > p1->calculate_overall_fitness()) {
+            p2 = p1; // Move the current p1 to p2
+            p1 = &individuals[i]; // Set the new p1
+        } else if (individuals[i].calculate_overall_fitness() > p2->calculate_overall_fitness()) {
+            p2 = &individuals[i]; // Set the new p2
+        }
+    }
+}
+}
+
+void Population::set_mutation(double mRate) {
+    // Set the mutation rate
+    if (mRate >= 0 && mRate <= 1) {
+        mutationRate = mRate;
+    } else {
+        mutationRate = 0.0; // Set to 0.0 if mRate is not within the valid range
+    }
+}
+
+
+void Population::generate_new_population(int useRoulette) {
+    // Create a temporary array to hold the new population
+    genome* newIndividuals = new genome[nIndividuals];
+
+    // Roulette wheel selection
+    if (useRoulette == 1) {
+        roulette_wheel_selection(newIndividuals);
+    } else {
+        // Simple top two selection
+        select_parents();
+
+        // Perform crossover and mutation on the selected parents
+        for (int i = 0; i < nIndividuals; ++i) {
+            // Select parents for crossover
+            genome* parent1 = p1;
+            genome* parent2 = p2;
+
+            // Perform crossover
+            genome child = crossover(parent1, parent2);
+
+            // Perform mutation
+            child.mutate();
+
+            // Copy child to new population
+            newIndividuals[i] = child;
+        }
+    }
+
+    // Replace the old population with the new one
+    delete[] individuals;
+    individuals = newIndividuals;
+}
+
+
+double Population::calculate_overall_fitness() {
+    double totalFitness = 0.0;
+
+    // Calculate the fitness of each individual and sum them up
+    for (int i = 0; i < nIndividuals; ++i) {
+        // Assuming each genome has a method to calculate its fitness
+        totalFitness += individuals[i].calculate_overall_fitness(targetGenome, imageSize);
+    }
+
+    // Return the average fitness
+    return totalFitness / nIndividuals;
+}
+
+void Population::print_parents() {
+    if (p1 == nullptr || p2 == nullptr) {
+        cout << "No parents yet set." << endl;
+    } else {
+        cout << "Parent 1:" << endl;
+        p1->print();
+        cout << "Parent 2:" << endl;
+        p2->print();
+    }
+}
+
+void Population::print_population() {
+    cout << "Number of crossover points: " << nCrossover << endl;
+    cout << "Mutation rate: " << mutationRate << endl;
+    cout << "Population:" << endl;
+    for (int i = 0; i < nIndividuals; ++i) {
+        cout << "Individual " << i+1 << ":" << endl;
+        individuals[i].print();
+        cout << endl;
+    }
+}
